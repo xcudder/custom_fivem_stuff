@@ -23,14 +23,21 @@ function entities_close_enough(first_entity, second_entity, overwrite_radius)
 	if not overwrite_radius then overwrite_radius = 1.5 end
 	local A = GetEntityCoords(first_entity, false)
 	local B = GetEntityCoords(second_entity, false)
-	return Vdist(B.x, B.y, B.z, A.x, A.y, A.z) < 1.5
+	return Vdist(B.x, B.y, B.z, A.x, A.y, A.z) < overwrite_radius
+end
+
+function EnterVehicleWrapper(ped, car)
+	if IsVehicleSeatFree(car, 1) then TaskEnterVehicle(ped, car, 5000, 0, 2.0, 1, 0)
+	elseif IsVehicleSeatFree(car, 3) then TaskEnterVehicle(ped, car, 5000, 1, 2.0, 1, 0)
+	elseif IsVehicleSeatFree(car, 5) then TaskEnterVehicle(ped, car, 5000, 2, 2.0, 1, 0)
+	end
 end
 
 function entity_close_to_coord(entity, coords, overwrite_radius)
 	if not overwrite_radius then overwrite_radius = 1.5 end
 	local A = coords
 	local B = GetEntityCoords(entity, false)
-	return Vdist(B.x, B.y, B.z, A.x, A.y, A.z) < 1.5
+	return Vdist(B.x, B.y, B.z, A.x, A.y, A.z) < overwrite_radius
 end
 
 function setupBlip(info)

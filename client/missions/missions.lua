@@ -73,11 +73,13 @@ function spawn_control_threads()
 			Wait(500)
 			if IsPedDeadOrDying(victim) then
 				terminate_mission()
+				show_message()
 			end
 
-			if safepoint and entity_close_to_coord(victim, safe_point, 10.0) then
+			if entity_close_to_coord(victim, safe_point, 5.0) then
 				DeletePed(victim)
 				terminate_mission(true)
+				show_message(true)
 			end
 		end
 	end)
@@ -125,13 +127,6 @@ function spawn_control_threads()
 	end)
 end
 
-function EnterVehicleWrapper(ped, car)
-	if IsVehicleSeatFree(car, 1) then TaskEnterVehicle(ped, car, 5000, 0, 2.0, 1, 0)
-	elseif IsVehicleSeatFree(car, 3) then TaskEnterVehicle(ped, car, 5000, 1, 2.0, 1, 0)
-	elseif IsVehicleSeatFree(car, 5) then TaskEnterVehicle(ped, car, 5000, 2, 2.0, 1, 0)
-	end
-end
-
 function terminate_mission()
 	if DoesBlipExist(safezone_blip) then RemoveBlip(safezone_blip) end
 	if DoesBlipExist(hostage_blip) then RemoveBlip(hostage_blip) end
@@ -147,4 +142,34 @@ end
 
 RegisterCommand('run_mission', function(source, args)
 	run_mission()
+end)
+
+function show_message(success)
+	local sf = RequestScaleformMovie("MP_BIG_MESSAGE_FREEMODE")
+	local showSf = true
+
+	local txt = 'Failed'
+	if success then txt = 'Success!' end
+
+	while not HasScaleformMovieLoaded(sf) do Citizen.Wait(1000) end
+	BeginScaleformMovieMethod(sf, "SHOW_CENTERED_MP_MESSAGE_LARGE")
+	PushScaleformMovieMethodParameterString(txt)
+  	-- PushScaleformMovieMethodParameterString("Hostage Rescued")
+	EndScaleformMovieMethod()
+	EndScaleformMovieMethodReturn()
+
+	Citizen.CreateThread(function()
+		while showSf do 
+			Wait(0)
+			DrawScaleformMovieFullscreen(sf, 255, 255, 255, 255)
+		end
+	end)
+
+	Wait(3000)
+	showSf = false
+end
+
+--for debug
+RegisterCommand('show_message', function(source, args)
+	show_message(args[1])
 end)
