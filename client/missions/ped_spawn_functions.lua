@@ -26,7 +26,7 @@ function create_unaware_hostile(hash, coords, heading)
 	SetPedCombatMovement(hostile, 0)
 	SetEntityHealth(hostile, 200)
 	if heading then SetEntityHeading(hostile, heading) end
-	SetPedSeeingRange(hostile, 100.0)
+	SetPedSeeingRange(hostile, 30.0)
 	SetPedHearingRange(hostile, 20.0)
 	SetPedVisualFieldPeripheralRange(hostile, 90.0)
 	SetPedAsEnemy(hostile)

@@ -1,17 +1,24 @@
 
 local _hg, hostile_group = AddRelationshipGroup('b_ops_kidnappers')
 local _vg, victim_group = AddRelationshipGroup('kidnapped')
+local _hdg, hostile_drop_group = AddRelationshipGroup('hostile_drop_group')
 
 local victim = false
 local hostiles = {}
 local dead_hostiles = {}
+local hostile_drop = false
+
+local drop_blip = false
 local hostage_blip = false
 local safezone_blip = false
+
 local is_hostage_following = false
 local safe_point = false
+local M = false
 
 function run_mission()
-	local M = MISSIONS[math.random(#MISSIONS)]
+	terminate_mission()
+	M = MISSIONS[math.random(#MISSIONS)]
 
 	SMS_Message(M.sms.char, M.sms.sender, M.sms.subject, M.sms.message, true)
 	safe_point = M.rescue.v3
@@ -28,6 +35,14 @@ function run_mission()
 		SetPedAsGroupMember(hostiles[i], hostile_group)
 		SetPedRelationshipGroupDefaultHash(hostiles[i], hostile_group)
 		SetPedRelationshipGroupHash(hostiles[i], hostile_group)
+	end
+
+	if M.weapon_drop.drop_type == 'hostile' then
+		drop_blip = setupBlip({ title="Weapon Opportunity", colour=2, id=458, v3=M.weapon_drop.v3 })
+		hostile_drop = create_unaware_hostile(M.weapon_drop.hash, M.weapon_drop.v3, M.weapon_drop.heading)
+		SetPedAsGroupMember(hostile_drop, hostile_drop_group)
+		SetPedRelationshipGroupDefaultHash(hostile_drop, hostile_drop_group)
+		SetPedRelationshipGroupHash(hostile_drop, hostile_drop_group)
 	end
 
 	spawn_control_threads()
@@ -47,6 +62,26 @@ function spawn_control_threads()
 						break
 					end
 				end
+			end
+		end
+	end)
+
+	-- hostile drop control
+	Citizen.CreateThread(function()
+		while true do
+			Wait(1000)
+
+			if GetPedAlertness(hostile_drop) > 2 then
+				TaskCombatPed(hostile_drop, PlayerPedId(), 0, 16)
+				break
+			end
+
+			if IsPedDeadOrDying(hostile_drop) then
+				TriggerServerEvent("mission:create_weapon_drop", {
+					{M.weapon_drop.weapon, 1},
+					{M.weapon_drop.ammo, 11}
+				}, GetEntityCoords(hostile_drop))
+				return
 			end
 		end
 	end)
@@ -78,6 +113,7 @@ function spawn_control_threads()
 
 			if entity_close_to_coord(victim, safe_point, 5.0) then
 				DeletePed(victim)
+				SMS_Message(M.success_sms.char, M.success_sms.sender, M.success_sms.subject, M.success_sms.message, true)
 				terminate_mission(true)
 				show_message(true)
 			end
@@ -130,7 +166,10 @@ end
 function terminate_mission()
 	if DoesBlipExist(safezone_blip) then RemoveBlip(safezone_blip) end
 	if DoesBlipExist(hostage_blip) then RemoveBlip(hostage_blip) end
-	DeletePed(victim)
+	if DoesBlipExist(drop_blip) then RemoveBlip(drop_blip) end
+
+	if DoesEntityExist(victim) then DeletePed(victim) end
+	if DoesEntityExist(hostile_drop) then DeletePed(hostile_drop) end
 	for i = 1, #hostiles do DeletePed(hostiles[i]) end
 
 	victim = false
@@ -138,6 +177,8 @@ function terminate_mission()
 	dead_hostiles = {}
 	is_hostage_following = false
 	safe_point = false
+	hostile_drop = false
+	M = false
 end
 
 RegisterCommand('run_mission', function(source, args)
